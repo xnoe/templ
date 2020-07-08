@@ -1,2 +1,2 @@
 templ:
-	g++ -o templ main.cpp
+	g++ -o testfiles/templ main.cpp
