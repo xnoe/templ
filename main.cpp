@@ -2,7 +2,7 @@
 #include <fstream>
 #include <filesystem>
 
-#include "../C++UTF8Test/utf8.h"
+#include "utf8.h"
 
 namespace fs = std::filesystem;
 
