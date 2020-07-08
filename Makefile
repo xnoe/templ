@@ -1,2 +1,2 @@
 templ:
-	g++ -o testfiles/templ main.cpp
+	g++ -std=c++17 -o testfiles/templ main.cpp
