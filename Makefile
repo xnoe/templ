@@ -1,2 +1,5 @@
 templ:
-	g++ -std=c++17 -o testfiles/templ main.cpp
+	g++ -std=c++17 -o templ main.cpp
+
+install:
+	mv templ $(DESTDIR)/usr/bin/templ
