@@ -10,11 +10,11 @@ const int MAX_FILE_SIZE = 65536;
 
 string32 readfile(const char* name) {
 	std::fstream file_stream;
-  file_stream.open(name);
+	file_stream.open(name);
 
-  char* data = new char [MAX_FILE_SIZE];
-  int count(0);
-  while (file_stream)
+	char* data = new char [MAX_FILE_SIZE];
+	int count(0);
+	while (file_stream)
 		data[count++] = file_stream.get();
 	file_stream.close();
 	data[--count] = 0;
