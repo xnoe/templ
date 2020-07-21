@@ -12,7 +12,7 @@ Templ is a static-site "generator" aimed at aiding the creation of multi-pages s
 
 # Usage
 
-Templ is designed to be fairly simple to use. Place your site's files in the directory called `source`. Files are directories beginning with `_` will be ignored by Templ.
+Templ is designed to be fairly simple to use. Place your site's files in the directory called `source`. Files and directories beginning with `_` will be ignored by Templ.
 
 A basic "Front Matter" for a page maybe be:
 ```
@@ -25,7 +25,12 @@ url: https://example.com
 
 This will cause Templ to use the file `source/_layouts/default.html` for the layout (where `{{ content }}` within that file will be replaced with the page's source) and define the variables `page.title` and `page.url` (accessible via `{{ page.title }}` and `{{ page.url }}`). Templ will also read configurations from the (badly named) `source/_config.yml` file. This isn't (yet) able to store YAML. Just values separated by `: ` (space included).
 
-Templ is usable in some circumstances but still may be sub-par for people lookint for an actual static site generator. It's also *very, very, **very*** slow!
+Templ is usable in some circumstances but still may be sub-par for people looking for an actual static site generator. It's also *very, very, **very*** slow!
+
+
+Templ also has the ability to include files within outputted content. This is achieved with the `{% include example.file %}` "command". This will look in `source/_includes/` for the named file and insert it in to the document in place.
+
+This allows you to have a separate `.css` file for your stylesheets while also including them directly inside your HTML file (for example, if you want the outputted document to work as a single HTML file.)
 
 # Using outputted content
 
