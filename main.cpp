@@ -30,41 +30,40 @@ string32 readfile(std::string name) {
 
 class frontMatter {
 	void set(string32 key, string32 val) {
-		values[std::string(key.asChar())] = val;
+		char* asChar = key.asChar();
+		values[std::string(asChar)] = val;
+		delete asChar;
 	}
 public:
 	char* layout;
 	bool hasLayout = false;
 	string32 parsed;
 	std::unordered_map<std::string, string32> values;
+
   frontMatter(string32 unparsedPage) {
 		std::vector<string32> lines = unparsedPage.split("\n");
-		if (lines.front() == "---") {
-			int line = 1;
-			for (;lines[line]!="---";line++) {
-				std::vector dataToParse = lines[line].split(": ");
-				if (dataToParse[0] == "layout") {
-					layout = dataToParse[1].asChar();
-					hasLayout = true;
-				} else
+		if (lines.front() != "---")
+			parsed = unparsedPage;
+		else {
+			int line (0);
+			while (line++, lines[line]!="---") {
+				std::vector<string32> dataToParse = lines[line].split(": ");
+				if (dataToParse[0] == "layout")
+					hasLayout = layout = dataToParse[1].asChar(), true;
+				else
 					set("page." + dataToParse[0], dataToParse[1]);
 			}
 			line++;
-			for (;line<lines.size();line++) {
+			for (;line<lines.size();line++)
 				parsed += lines[line] + "\n";
-			}
-		} else {
-			parsed = unparsedPage;
 		}
+
 		std::vector<string32> config = readfile("source/_config.yml").split("\n");
 		for (string32 line : config) {
 			std::vector<string32> split = line.split(": ");
 			set("site." + split[0], split[1]);
 		}
   }
-	string32 operator[](string32 s) {
-		return values[std::string(s.asChar())];
-	}
 };
 
 string32 parsePageHTML(string32 pageContents) {
@@ -74,48 +73,44 @@ string32 parsePageHTML(string32 pageContents) {
 		page = readfile("source/_layouts/" + std::string(fm.layout) + ".html").replace("{{ content }}", fm.parsed);
 	else
 		page = fm.parsed;
+
 	for (auto pair : fm.values)
 		page.replaceSelfAll("{{ " + pair.first + " }}", pair.second);
-	int i (0);
+
 	string32 searchString = "{% ";
-	string32 endString = " %}";
-	while (i < page.cs.size()) {
-		int havematched (0);
-		for (;i<page.cs.size();i++) {
+	int tofind (searchString.cs.size());
+	int i (0);
+	while (i < page.len()) {
+		int havematched = 0;
+		for (;i<page.len();i++) {
 			if (page.cs[i] == searchString[havematched])
 				havematched++;
 			else
 				havematched = 0;
-			if (havematched == searchString.cs.size())
+			if (havematched == tofind)
 				break;
 		}
 		if (!havematched)
 			break;
+		havematched--;
 		int si (i-3);
 		int ei (0);
-		for (;i<page.cs.size();i++) {
-			if (page.cs[i] == endString[havematched]) {
-				havematched++;
-				ei = i;
-			} else
-				havematched = 0;
-			if (havematched == endString.cs.size()) {
-				ei -= endString.cs.size();
+		for (;i<page.len();i++) {
+			if (page[i] == searchString[havematched])
+				ei = i, havematched--;
+			else
+				havematched = tofind-1;
+			if (!havematched) {
+				ei -= tofind-1;
 				break;
 			}
 		}
-		string32 testString;
-		for (int j(si+4);j<=ei;j++)
-			testString += page[j];
+		std::vector<string32> split = string32(page, si+4, ei+1).split(" ");
 		page.cs.erase(page.cs.begin()+si, page.cs.begin()+ei+4);
-		std::vector<string32> split = testString.split(" ");
 		if (split[0] == "include") {
 			string32 toInclude = readfile("source/_includes/" + std::string(split[1].asChar()));
 			page.cs.insert(page.cs.begin()+si, toInclude.cs.begin(), toInclude.cs.end());
 		}
-		i = 0;
-		si = 0;
-		ei = 0;
 	}
 	return page;
 }
