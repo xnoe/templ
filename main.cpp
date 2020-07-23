@@ -10,12 +10,12 @@ namespace fs = std::filesystem;
 char* read(const char* name) {
 	std::ifstream file_stream(name, std::ios_base::binary);
 
-	int count = 0;
 	file_stream.seekg(0, file_stream.end);
 	int length = file_stream.tellg();
 	file_stream.seekg(0, file_stream.beg);
-	char* data = (char*) calloc(length+1, 1);
-	file_stream.read(data, length);
+	char* data = (char*) calloc(length+5, 1);
+	file_stream.read(data+4, length);
+	memcpy(data, &length, 4);
 
 	file_stream.close();
 	return data;
@@ -23,7 +23,7 @@ char* read(const char* name) {
 
 string32 readfile(std::string name) {
 	char* data = read(name.c_str());
-	string32 file = string32 (data);
+	string32 file = string32 (data+4);
 	free (data);
 	return file;
 }
@@ -66,9 +66,10 @@ public:
   }
 };
 
-string32 parsePageHTML(string32 pageContents) {
+string32 parsePage(string32 pageContents) {
 	frontMatter fm = frontMatter(pageContents);
 	string32 page;
+
 	if (fm.hasLayout)
 		page = readfile("source/_layouts/" + std::string(fm.layout) + ".html").replace("{{ content }}", fm.parsed);
 	else
@@ -83,18 +84,21 @@ string32 parsePageHTML(string32 pageContents) {
 	while (i < page.len()) {
 		int havematched = 0;
 		for (;i<page.len();i++) {
+			if (havematched == tofind)
+				break;
 			if (page.cs[i] == searchString[havematched])
 				havematched++;
 			else
 				havematched = 0;
-			if (havematched == tofind)
-				break;
 		}
+
 		if (!havematched)
 			break;
+
 		havematched--;
 		int si (i-3);
 		int ei (0);
+
 		for (;i<page.len();i++) {
 			if (page[i] == searchString[havematched])
 				ei = i, havematched--;
@@ -105,14 +109,19 @@ string32 parsePageHTML(string32 pageContents) {
 				break;
 			}
 		}
-		std::vector<string32> split = string32(page, si+4, ei+1).split(" ");
+		std::vector<string32> split = string32(page, si+3, ei+1).split(" ");
 		page.cs.erase(page.cs.begin()+si, page.cs.begin()+ei+4);
+
 		if (split[0] == "include") {
 			string32 toInclude = readfile("source/_includes/" + std::string(split[1].asChar()));
 			page.cs.insert(page.cs.begin()+si, toInclude.cs.begin(), toInclude.cs.end());
 		}
 	}
 	return page;
+}
+
+string32 parsePageHTML(string32 htmlContents) {
+	return parsePage(htmlContents);
 }
 
 int main() {
@@ -130,7 +139,10 @@ int main() {
 			if (ext == ".html") {
 				outfile << parsePageHTML(readfile(file.path().c_str()));
 			} else {
-				outfile << read(file.path().c_str());
+				char* data = read(file.path().c_str());
+				int length = *(int*)data;
+				outfile.write(data+4, length);
+				delete data;
 			}
 			outfile.close();
 		}
