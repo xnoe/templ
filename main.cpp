@@ -124,6 +124,31 @@ string32 parsePageHTML(string32 htmlContents) {
 	return parsePage(htmlContents);
 }
 
+string32 parsePageMD(string32 mdContents) {
+	string32 htmlContents;
+	// Process markdown in to HTML
+
+	// Markdown is nicely separated by `\n\n` for each "section" so we can process them individually.
+	std::vector<string32> sections = mdContents.split("\n\n");
+
+	for (string32 section : sections) {
+		if (section.substr(0, 3) == "---") {
+			htmlContents += section + "\n\n";
+			continue;
+	  } else if (section[0] == "#") {
+	  	htmlContents += "<h1>" + section.substr(1) + "</h1>";
+	  } else {
+		  htmlContents += "<p>" + section + "</p>";
+		}
+		htmlContents.replaceAroundSelfAll("***", "** *");
+		htmlContents.replaceAroundSelfAsymAll("**", "**", "<strong>", "</strong>");
+		htmlContents.replaceAroundSelfAsymAll("*", "*", "<em>", "</em>");
+	}
+
+	// Run it through normal pagePage
+	return parsePage(htmlContents);
+}
+
 int main() {
 	std::string path = "source";
 
@@ -134,11 +159,17 @@ int main() {
 			continue;
 		if (file.is_regular_file()) {
 			std::string ext = file.path().extension().string();
+			std::string writeExt = ext;
 			fs::create_directories("output" + file.path().parent_path().string().substr(6));
-			std::ofstream outfile("output" + file.path().string().substr(6));
-			if (ext == ".html") {
+			std::string path = file.path().string();
+			if (writeExt == ".md")
+				writeExt = ".html";
+			std::ofstream outfile("output" + path.substr(6, path.size() - ext.size() - 6) + writeExt);
+			if (ext == ".html")
 				outfile << parsePageHTML(readfile(file.path().c_str()));
-			} else {
+			else if (ext == ".md")
+				outfile << parsePageMD(readfile(file.path().c_str()));
+			else {
 				char* data = read(file.path().c_str());
 				int length = *(int*)data;
 				outfile.write(data+4, length);
