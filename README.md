@@ -40,8 +40,6 @@ Formatted pages will be in the `output` folder, in the same directory that Templ
 
 Not very bug tested! (Aka. don't use for prod!)
 
-Images break it (seems to be an issue with file reading with multiple consecutive `null` bytes? If anyone can send a PR that'd be great!)
-
 Occasionally gets in to an infinite loop if start / end tags for things are done properly, without any sanity check. (^C to escape and check your source files). This shouldn't be too major of a bug but is just a sign of my awful code :( Sorry All.
 
 Still lacks many necessary features that some people would like to have.
