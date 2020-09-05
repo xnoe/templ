@@ -80,13 +80,13 @@ string32 parsePage(string32 pageContents) {
 
 	string32 searchString = "{% ";
 	int tofind (searchString.cs.size());
-	int i (0);
-	while (i < page.len()) {
+	int index (0);
+	while (index < page.len()) {
 		int havematched = 0;
-		for (;i<page.len();i++) {
+		for (;index<page.len();index++) {
 			if (havematched == tofind)
 				break;
-			if (page.cs[i] == searchString[havematched])
+			if (page.cs[index] == searchString[havematched])
 				havematched++;
 			else
 				havematched = 0;
@@ -96,25 +96,25 @@ string32 parsePage(string32 pageContents) {
 			break;
 
 		havematched--;
-		int si (i-3);
-		int ei (0);
+		int startIndex (index-tofind);
+		int endIndex (0);
 
-		for (;i<page.len();i++) {
-			if (page[i] == searchString[havematched])
-				ei = i, havematched--;
+		for (;index<page.len();index++) {
+			if (page[index] == searchString[havematched])
+				endIndex = index, havematched--;
 			else
 				havematched = tofind-1;
 			if (!havematched) {
-				ei -= tofind-1;
+				endIndex -= tofind-1;
 				break;
 			}
 		}
-		std::vector<string32> split = string32(page, si+3, ei+1).split(" ");
-		page.cs.erase(page.cs.begin()+si, page.cs.begin()+ei+4);
+		std::vector<string32> split = string32(page, startIndex+tofind, endIndex+1).split(" ");
+		page.cs.erase(page.cs.begin()+startIndex, page.cs.begin()+endIndex+tofind+1);
 
 		if (split[0] == "include") {
 			string32 toInclude = readfile("source/_includes/" + std::string(split[1].asChar()));
-			page.cs.insert(page.cs.begin()+si, toInclude.cs.begin(), toInclude.cs.end());
+			page.cs.insert(page.cs.begin()+startIndex, toInclude.cs.begin(), toInclude.cs.end());
 		}
 	}
 	return page;
@@ -132,17 +132,48 @@ string32 parsePageMD(string32 mdContents) {
 	std::vector<string32> sections = mdContents.split("\n\n");
 
 	for (string32 section : sections) {
+		char* asChar = section[0].toChar();
+		char firstChar = *asChar;
+		delete asChar;
+
+		string32 toAdd = "";
+
 		if (section.substr(0, 3) == "---") {
 			htmlContents += section + "\n\n";
 			continue;
-	  } else if (section[0] == "#") {
-	  	htmlContents += "<h1>" + section.substr(1) + "</h1>";
+	  } else if (firstChar == '#') {
+	  	toAdd += "<h1>" + section.substr(1) + "</h1>";
+	  } else if (firstChar >= 0x30 && firstChar <= 0x39) {
+	  	// ToDo: Impement Numeric Lists
+	  } else if (section.substr(0, 3) == "```") {
+			std::vector<string32> lines = section.split("\n");
+			string32 language = lines[0].substr(3);
+			lines.erase(lines.begin());
+			lines.pop_back();
+
+			// ToDo: Handle syntax highlighting.
+
+			toAdd += "<code>";
+			for (auto line : lines)
+				toAdd += line + "<br>";
+			toAdd += "</code>";
 	  } else {
-		  htmlContents += "<p>" + section + "</p>";
+		  toAdd += "<p>" + section + "</p>";
 		}
-		htmlContents.replaceAroundSelfAll("***", "** *");
-		htmlContents.replaceAroundSelfAsymAll("**", "**", "<strong>", "</strong>");
-		htmlContents.replaceAroundSelfAsymAll("*", "*", "<em>", "</em>");
+
+		// Single Code
+		toAdd.replaceAroundSelfAsymAll("`", "`", "<code>", "</code>");
+
+		// Underline
+		toAdd.replaceAroundSelfAsymAll("__", "__", "<u>", "</u>");
+
+		// Bold / Italic
+		toAdd.replaceAroundSelfAll("***", "** *"); // Bold and Italic
+		toAdd.replaceAroundSelfAsymAll("**", "**", "<strong>", "</strong>"); // Bold
+		toAdd.replaceAroundSelfAsymAll("*", "*", "<em>", "</em>"); // Italic
+		toAdd.replaceAroundSelfAsymAll("_", "_", "<em>", "</em>"); // Italic
+
+		htmlContents += toAdd;
 	}
 
 	// Run it through normal pagePage
@@ -157,6 +188,7 @@ int main() {
 	for (const auto & file : fs::recursive_directory_iterator(path)) {
 		if (file.path().stem().string()[0] == '_' || file.path().string()[7] == '_')
 			continue;
+
 		if (file.is_regular_file()) {
 			std::string ext = file.path().extension().string();
 			std::string writeExt = ext;
@@ -165,11 +197,11 @@ int main() {
 			if (writeExt == ".md")
 				writeExt = ".html";
 			std::ofstream outfile("output" + path.substr(6, path.size() - ext.size() - 6) + writeExt);
-			if (ext == ".html")
+			if (ext == ".html") {
 				outfile << parsePageHTML(readfile(file.path().c_str()));
-			else if (ext == ".md")
+			} else if (ext == ".md") {
 				outfile << parsePageMD(readfile(file.path().c_str()));
-			else {
+			} else {
 				char* data = read(file.path().c_str());
 				int length = *(int*)data;
 				outfile.write(data+4, length);
